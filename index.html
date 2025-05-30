@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Advanced To-Do List</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f9f9f9;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .dark-mode {
+      background-color: #222;
+      color: #eee;
+    }
+    h1 {
+      text-align: center;
+    }
+    .todo-container {
+      max-width: 400px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #ccc;
+    }
+    .dark-mode .todo-container {
+      background: #333;
+      box-shadow: 0 0 10px #555;
+    }
+    input[type="text"] {
+      width: 70%;
+      padding: 10px;
+      margin-right: 5px;
+    }
+    button {
+      padding: 10px;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    li {
+      padding: 8px;
+      background: #e0e0e0;
+      margin: 5px 0;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .dark-mode li {
+      background: #444;
+    }
+    li.completed span {
+      text-decoration: line-through;
+      color: #888;
+    }
+    .btn {
+      margin-left: 5px;
+      padding: 4px 8px;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .edit-btn { background-color: orange; color: white; }
+    .delete-btn { background-color: red; color: white; }
+    .mode-toggle {
+      float: right;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <button class="mode-toggle" onclick="toggleDarkMode()">🌙/☀️</button>
+  <div class="todo-container">
+    <h1>To-Do List</h1>
+    <input type="text" id="taskInput" placeholder="Enter a task..." />
+    <button onclick="addTask()">Add</button>
+    <ul id="taskList"></ul>
+  </div>
+
+  <script>
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+    function saveTasks() {
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    function renderTasks() {
+      const list = document.getElementById("taskList");
+      list.innerHTML = "";
+      tasks.forEach((task, index) => {
+        const li = document.createElement("li");
+        li.className = task.completed ? "completed" : "";
+
+        const span = document.createElement("span");
+        span.textContent = task.text;
+        span.style.flex = "1";
+        span.onclick = () => toggleComplete(index);
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Edit";
+        editBtn.className = "btn edit-btn";
+        editBtn.onclick = () => editTask(index);
+
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Delete";
+        delBtn.className = "btn delete-btn";
+        delBtn.onclick = () => deleteTask(index);
+
+        li.appendChild(span);
+        li.appendChild(editBtn);
+        li.appendChild(delBtn);
+        list.appendChild(li);
+      });
+    }
+
+    function addTask() {
+      const input = document.getElementById("taskInput");
+      const taskText = input.value.trim();
+      if (taskText) {
+        tasks.push({ text: taskText, completed: false });
+        saveTasks();
+        renderTasks();
+        input.value = "";
+      }
+    }
+
+    function toggleComplete(index) {
+      tasks[index].completed = !tasks[index].completed;
+      saveTasks();
+      renderTasks();
+    }
+
+    function deleteTask(index) {
+      tasks.splice(index, 1);
+      saveTasks();
+      renderTasks();
+    }
+
+    function editTask(index) {
+      const newText = prompt("Edit your task:", tasks[index].text);
+      if (newText !== null && newText.trim() !== "") {
+        tasks[index].text = newText.trim();
+        saveTasks();
+        renderTasks();
+      }
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+
+    // Initial render
+    renderTasks();
+  </script>
+</body>
+</html>
