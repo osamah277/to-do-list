@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Advanced To-Do List</title>
+  <title>Advanced To-Do List with Due Dates</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -31,9 +31,15 @@
       box-shadow: 0 0 10px #555;
     }
     input[type="text"] {
-      width: 70%;
+      width: 50%;
       padding: 10px;
       margin-right: 5px;
+      box-sizing: border-box;
+    }
+    input[type="date"] {
+      padding: 10px;
+      margin-right: 5px;
+      box-sizing: border-box;
     }
     button {
       padding: 10px;
@@ -50,6 +56,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
     }
     .dark-mode li {
       background: #444;
@@ -64,6 +71,7 @@
       border: none;
       cursor: pointer;
       border-radius: 4px;
+      flex-shrink: 0;
     }
     .edit-btn { background-color: orange; color: white; }
     .delete-btn { background-color: red; color: white; }
@@ -74,14 +82,20 @@
       background: none;
       border: none;
       font-size: 16px;
+      margin-bottom: 10px;
+    }
+    small {
+      margin-left: 10px;
+      font-size: 0.85em;
     }
   </style>
 </head>
 <body>
-  <button class="mode-toggle" onclick="toggleDarkMode()">🌙</button>
+  <button class="mode-toggle" onclick="toggleDarkMode()">🌙/☀️</button>
   <div class="todo-container">
     <h1>To-Do List</h1>
     <input type="text" id="taskInput" placeholder="Enter a task..." />
+    <input type="date" id="dueDateInput" />
     <button onclick="addTask()">Add</button>
     <ul id="taskList"></ul>
     <button class="clear-btn" onclick="clearTasks()">Clear All</button>
@@ -97,16 +111,7 @@
     function renderTasks() {
       const list = document.getElementById("taskList");
       list.innerHTML = "";
-
-      if (tasks.length === 0) {
-        const emptyMsg = document.createElement("li");
-        emptyMsg.textContent = "No tasks yet!";
-        emptyMsg.style.textAlign = "center";
-        emptyMsg.style.color = "#888";
-        emptyMsg.style.fontStyle = "italic";
-        list.appendChild(emptyMsg);
-        return;
-      }
+      const today = new Date().toISOString().split("T")[0];
 
       tasks.forEach((task, index) => {
         const li = document.createElement("li");
@@ -115,7 +120,22 @@
         const span = document.createElement("span");
         span.textContent = task.text;
         span.style.flex = "1";
+        span.style.cursor = "pointer";
         span.onclick = () => toggleComplete(index);
+
+        if (task.due) {
+          const dueSpan = document.createElement("small");
+          dueSpan.textContent = `(Due: ${task.due})`;
+
+          // Highlight overdue or today
+          if (!task.completed && task.due < today) {
+            dueSpan.style.color = "red";
+          } else if (!task.completed && task.due === today) {
+            dueSpan.style.color = "orange";
+          }
+
+          span.appendChild(dueSpan);
+        }
 
         const editBtn = document.createElement("button");
         editBtn.textContent = "Edit";
@@ -136,16 +156,16 @@
 
     function addTask() {
       const input = document.getElementById("taskInput");
+      const dueInput = document.getElementById("dueDateInput");
       const taskText = input.value.trim();
+      const dueDate = dueInput.value;
+
       if (taskText) {
-        if (tasks.some(task => task.text === taskText)) {
-          alert("Task already exists!");
-          return;
-        }
-        tasks.push({ text: taskText, completed: false });
+        tasks.push({ text: taskText, completed: false, due: dueDate });
         saveTasks();
         renderTasks();
         input.value = "";
+        dueInput.value = "";
       }
     }
 
@@ -156,26 +176,26 @@
     }
 
     function deleteTask(index) {
-      if (confirm("Delete this task?")) {
-        tasks.splice(index, 1);
-        saveTasks();
-        renderTasks();
-      }
+      tasks.splice(index, 1);
+      saveTasks();
+      renderTasks();
     }
 
     function editTask(index) {
       const newText = prompt("Edit your task:", tasks[index].text);
+      const newDue = prompt("Edit due date (YYYY-MM-DD):", tasks[index].due || "");
+
       if (newText !== null && newText.trim() !== "") {
         tasks[index].text = newText.trim();
+        tasks[index].due = newDue || "";
         saveTasks();
         renderTasks();
       }
     }
 
     function toggleDarkMode() {
-      const isDark = document.body.classList.toggle("dark-mode");
-      document.querySelector(".mode-toggle").textContent = isDark ? "☀️" : "🌙";
-      localStorage.setItem("darkMode", isDark);
+      document.body.classList.toggle("dark-mode");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
     }
 
     function clearTasks() {
@@ -186,17 +206,34 @@
       }
     }
 
+    // Notifications for tasks due today
+    function checkReminders() {
+      if (!("Notification" in window)) return;
+      if (Notification.permission !== "granted") return;
+
+      const today = new Date().toISOString().split("T")[0];
+      tasks.forEach(task => {
+        if (!task.completed && task.due === today) {
+          new Notification("Task Due Today", { body: task.text });
+        }
+      });
+    }
+
     window.onload = () => {
-      const isDark = localStorage.getItem("darkMode") === "true";
-      if (isDark) {
+      if (localStorage.getItem("darkMode") === "true") {
         document.body.classList.add("dark-mode");
-        document.querySelector(".mode-toggle").textContent = "☀️";
-      } else {
-        document.querySelector(".mode-toggle").textContent = "🌙";
       }
       renderTasks();
+      if ("Notification" in window) {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            checkReminders();
+          }
+        });
+      }
     };
 
+    // Support adding task via Enter key
     document.getElementById("taskInput").addEventListener("keypress", function (e) {
       if (e.key === "Enter") {
         addTask();
