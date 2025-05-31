@@ -78,7 +78,7 @@
   </style>
 </head>
 <body>
-  <button class="mode-toggle" onclick="toggleDarkMode()">🌙/☀️</button>
+  <button class="mode-toggle" onclick="toggleDarkMode()">🌙</button>
   <div class="todo-container">
     <h1>To-Do List</h1>
     <input type="text" id="taskInput" placeholder="Enter a task..." />
@@ -97,6 +97,17 @@
     function renderTasks() {
       const list = document.getElementById("taskList");
       list.innerHTML = "";
+
+      if (tasks.length === 0) {
+        const emptyMsg = document.createElement("li");
+        emptyMsg.textContent = "No tasks yet!";
+        emptyMsg.style.textAlign = "center";
+        emptyMsg.style.color = "#888";
+        emptyMsg.style.fontStyle = "italic";
+        list.appendChild(emptyMsg);
+        return;
+      }
+
       tasks.forEach((task, index) => {
         const li = document.createElement("li");
         li.className = task.completed ? "completed" : "";
@@ -127,6 +138,10 @@
       const input = document.getElementById("taskInput");
       const taskText = input.value.trim();
       if (taskText) {
+        if (tasks.some(task => task.text === taskText)) {
+          alert("Task already exists!");
+          return;
+        }
         tasks.push({ text: taskText, completed: false });
         saveTasks();
         renderTasks();
@@ -141,9 +156,11 @@
     }
 
     function deleteTask(index) {
-      tasks.splice(index, 1);
-      saveTasks();
-      renderTasks();
+      if (confirm("Delete this task?")) {
+        tasks.splice(index, 1);
+        saveTasks();
+        renderTasks();
+      }
     }
 
     function editTask(index) {
@@ -156,8 +173,9 @@
     }
 
     function toggleDarkMode() {
-      document.body.classList.toggle("dark-mode");
-      localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
+      const isDark = document.body.classList.toggle("dark-mode");
+      document.querySelector(".mode-toggle").textContent = isDark ? "☀️" : "🌙";
+      localStorage.setItem("darkMode", isDark);
     }
 
     function clearTasks() {
@@ -168,15 +186,17 @@
       }
     }
 
-    // Load dark mode preference and setup
     window.onload = () => {
-      if (localStorage.getItem("darkMode") === "true") {
+      const isDark = localStorage.getItem("darkMode") === "true";
+      if (isDark) {
         document.body.classList.add("dark-mode");
+        document.querySelector(".mode-toggle").textContent = "☀️";
+      } else {
+        document.querySelector(".mode-toggle").textContent = "🌙";
       }
       renderTasks();
     };
 
-    // Support adding task via Enter key
     document.getElementById("taskInput").addEventListener("keypress", function (e) {
       if (e.key === "Enter") {
         addTask();
