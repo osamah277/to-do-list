@@ -3,25 +3,214 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Firebase To-Do List</title>
+  <title>To-Do List</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      --bg-light: #f4f6f8;
+      --bg-dark: #1e1e1e;
+      --container-light: #ffffff;
+      --container-dark: #2c2c2c;
+      --text-light: #333;
+      --text-dark: #eee;
+      --accent: #007BFF;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text-light);
+      margin: 0;
+      padding: 20px 20px 90px; /* space for logout button */
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .dark-mode {
+      background-color: var(--bg-dark);
+      color: var(--text-dark);
+    }
+
+    .container {
+      max-width: 480px;
+      margin: auto;
+      background-color: var(--container-light);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s;
+    }
+
+    .dark-mode .container {
+      background-color: var(--container-dark);
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+    }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 10px 16px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background-color: var(--accent);
+      color: white;
+      transition: background-color 0.2s;
+      margin-right: 10px;
+      margin-top: 6px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .mode-toggle {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      font-size: 1.5rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-light);
+    }
+
+    .dark-mode .mode-toggle {
+      color: var(--text-dark);
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 0;
+      margin-top: 16px;
+    }
+
+    li {
+      background-color: #e9e9e9;
+      margin-bottom: 10px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .dark-mode li {
+      background-color: #3a3a3a;
+    }
+
+    .task-text {
+      flex-grow: 1;
+      margin-right: 10px;
+      word-break: break-word;
+    }
+
+    .btn {
+      margin: 4px 4px 0 0;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .edit-btn {
+      background-color: orange;
+      color: white;
+    }
+
+    .save-btn {
+      background-color: green;
+      color: white;
+    }
+
+    .delete-btn {
+      background-color: crimson;
+      color: white;
+    }
+
+    .logout-btn {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      padding: 20px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      background-color: red;
+      color: white;
+      border: none;
+      border-radius: 0;
+      cursor: pointer;
+      z-index: 999;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    /* Responsive improvements */
+    @media (max-width: 520px) {
+      body {
+        padding: 15px 15px 90px;
+      }
+      .container {
+        padding: 16px;
+        margin: 10px;
+      }
+      button {
+        width: 100%;
+        margin: 6px 0 0 0;
+      }
+      .btn {
+        flex: 1 1 45%;
+        margin: 6px 2% 0 0;
+      }
+      li {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .task-text {
+        margin-bottom: 10px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h2>Login</h2>
-  <input type="text" id="email" placeholder="Email"><br>
-  <input type="password" id="password" placeholder="Password"><br>
-  <button onclick="login()">Login</button>
-  <button onclick="logout()">Logout</button>
+  <button class="mode-toggle" onclick="toggleDarkMode()">🌓</button>
 
-  <h2>To-Do List</h2>
-  <input type="text" id="taskInput" placeholder="Enter task">
-  <button onclick="addTask()">Add Task</button>
-  <ul id="taskList"></ul>
+  <div class="container">
+    <div id="loginContainer">
+      <h2>Login</h2>
+      <input type="text" id="email" placeholder="Email" autocomplete="username"><br>
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password"><br>
+      <button onclick="login()">Login</button>
+      <button onclick="register()" style="background-color: green;">Register</button>
+    </div>
+
+    <div id="todoContainer" class="hidden">
+      <h2>To-Do List</h2>
+      <input type="text" id="taskInput" placeholder="Enter task" autocomplete="off">
+      <button onclick="addTask()">Add Task</button>
+      <ul id="taskList"></ul>
+    </div>
+  </div>
+
+  <button id="logoutBtn" class="logout-btn hidden" onclick="logout()">Logout</button>
 
   <script>
-    // 1. Firebase config
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyA3FUbZhG2qA-lsVVpUJR4UEebhJQBIGLI",
       authDomain: "todolist-7c38d.firebaseapp.com",
@@ -34,22 +223,60 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // 2. Login
+    // Dark mode toggle
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+      localStorage.setItem("theme", document.body.classList.contains("dark-mode") ? "dark" : "light");
+    }
+
+    window.onload = () => {
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark") {
+        document.body.classList.add("dark-mode");
+      }
+    };
+
+    // Register new user
+    function register() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      if (!email || !password) return alert("Please enter email and password.");
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(() => {
+          alert("Registration successful! You are now logged in.");
+          document.getElementById("loginContainer").classList.add("hidden");
+          document.getElementById("todoContainer").classList.remove("hidden");
+          document.getElementById("logoutBtn").classList.remove("hidden");
+          loadTasks();
+        })
+        .catch(err => alert("Registration failed: " + err.message));
+    }
+
+    // Login existing user
     function login() {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
       auth.signInWithEmailAndPassword(email, password)
-        .then(() => loadTasks())
+        .then(() => {
+          document.getElementById("loginContainer").classList.add("hidden");
+          document.getElementById("todoContainer").classList.remove("hidden");
+          document.getElementById("logoutBtn").classList.remove("hidden");
+          loadTasks();
+        })
         .catch(err => alert("Login failed: " + err.message));
     }
 
+    // Logout user
     function logout() {
       auth.signOut().then(() => {
+        document.getElementById("loginContainer").classList.remove("hidden");
+        document.getElementById("todoContainer").classList.add("hidden");
+        document.getElementById("logoutBtn").classList.add("hidden");
         document.getElementById("taskList").innerHTML = "";
       });
     }
 
-    // 3. Add Task
+    // Add new task
     function addTask() {
       const user = auth.currentUser;
       if (!user) return alert("Login first.");
@@ -65,7 +292,34 @@
       }).catch(err => alert("Error adding task: " + err.message));
     }
 
-    // 4. Load Tasks
+    // Delete task
+    function deleteTask(taskId) {
+      const user = auth.currentUser;
+      if (!user) return;
+      db.collection("users").doc(user.uid).collection("tasks").doc(taskId)
+        .delete()
+        .then(() => loadTasks())
+        .catch(err => alert("Error deleting task: " + err.message));
+    }
+
+    // Save edited task text
+    function saveTaskEdit(taskId, inputElem, liElem) {
+      const newText = inputElem.value.trim();
+      if (!newText) {
+        alert("Task text cannot be empty.");
+        return;
+      }
+      const user = auth.currentUser;
+      if (!user) return;
+      db.collection("users").doc(user.uid).collection("tasks").doc(taskId)
+        .update({ text: newText })
+        .then(() => {
+          loadTasks();
+        })
+        .catch(err => alert("Error saving task: " + err.message));
+    }
+
+    // Load tasks and render them
     function loadTasks() {
       const user = auth.currentUser;
       if (!user) return;
@@ -75,19 +329,66 @@
           const list = document.getElementById("taskList");
           list.innerHTML = "";
           snapshot.forEach(doc => {
+            const data = doc.data();
             const li = document.createElement("li");
-            li.textContent = doc.data().text;
+
+            const taskText = document.createElement("span");
+            taskText.className = "task-text";
+            taskText.textContent = data.text;
+
+            const editBtn = document.createElement("button");
+            editBtn.className = "btn edit-btn";
+            editBtn.textContent = "Edit";
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "btn delete-btn";
+            deleteBtn.textContent = "Delete";
+
+            // Edit button functionality
+            editBtn.onclick = () => {
+              // Replace text span with input field
+              const input = document.createElement("input");
+              input.type = "text";
+              input.value = data.text;
+              input.style.flexGrow = "1";
+              input.style.marginRight = "10px";
+
+              li.replaceChild(input, taskText);
+              editBtn.textContent = "Save";
+              editBtn.classList.remove("edit-btn");
+              editBtn.classList.add("save-btn");
+
+              // Save changes on save button click
+              editBtn.onclick = () => saveTaskEdit(doc.id, input, li);
+            };
+
+            // Delete button functionality
+            deleteBtn.onclick = () => {
+              if (confirm("Delete this task?")) {
+                deleteTask(doc.id);
+              }
+            };
+
+            li.appendChild(taskText);
+            li.appendChild(editBtn);
+            li.appendChild(deleteBtn);
             list.appendChild(li);
           });
         })
         .catch(err => alert("Error loading tasks: " + err.message));
     }
 
-    // 5. Reload tasks on login
+    // Auth state listener
     auth.onAuthStateChanged(user => {
       if (user) {
+        document.getElementById("loginContainer").classList.add("hidden");
+        document.getElementById("todoContainer").classList.remove("hidden");
+        document.getElementById("logoutBtn").classList.remove("hidden");
         loadTasks();
       } else {
+        document.getElementById("loginContainer").classList.remove("hidden");
+        document.getElementById("todoContainer").classList.add("hidden");
+        document.getElementById("logoutBtn").classList.add("hidden");
         document.getElementById("taskList").innerHTML = "";
       }
     });
