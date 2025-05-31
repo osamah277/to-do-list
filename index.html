@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>To-Do List with Admin & Auth</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Firebase To-Do List with Auth & Admin</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -27,14 +27,19 @@
       background: #333;
       box-shadow: 0 0 10px #555;
     }
-    input[type="text"], input[type="password"] {
+    input[type="text"], input[type="password"], input[type="email"] {
       width: 70%;
       padding: 10px;
       margin-bottom: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
     }
     button {
       padding: 10px;
+      border-radius: 4px;
+      border: none;
       cursor: pointer;
+      margin-left: 5px;
     }
     .btn {
       margin: 5px 0;
@@ -52,7 +57,6 @@
       background: none;
       border: none;
       font-size: 20px;
-      margin-bottom: 10px;
     }
     ul { list-style-type: none; padding: 0; }
     li {
@@ -81,38 +85,22 @@
     .hidden {
       display: none;
     }
-    /* Admin panel logout button */
-    #adminPanel button.logout-btn {
-      margin-bottom: 15px;
-      padding: 8px 12px;
-      background-color: #d9534f;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    #adminPanel ul {
-      max-height: 200px;
+    .user-list {
+      max-height: 150px;
       overflow-y: auto;
-      margin-bottom: 15px;
-    }
-    #adminPanel li {
-      background: #ddd;
-      margin-bottom: 6px;
-      padding: 6px 8px;
+      border: 1px solid #ccc;
+      padding: 5px;
       border-radius: 4px;
+      background: #fafafa;
+    }
+    .user-item {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      padding: 4px 0;
+      border-bottom: 1px solid #ddd;
     }
-    #adminPanel .delete-user-btn {
-      background-color: red;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 4px 8px;
-      cursor: pointer;
-      margin-left: 10px;
+    .admin-panel {
+      margin-top: 20px;
     }
   </style>
 </head>
@@ -122,9 +110,19 @@
   <!-- Login Section -->
   <div class="container" id="loginContainer">
     <h2>Login</h2>
-    <input type="text" id="username" placeholder="Username" /><br />
+    <input type="email" id="email" placeholder="Email" /><br />
     <input type="password" id="password" placeholder="Password" /><br />
     <button onclick="login()">Login</button>
+    <button onclick="showRegister()">Register</button>
+  </div>
+
+  <!-- Register Section -->
+  <div class="container hidden" id="registerContainer">
+    <h2>Register</h2>
+    <input type="email" id="regEmail" placeholder="Email" /><br />
+    <input type="password" id="regPassword" placeholder="Password" /><br />
+    <button onclick="register()">Register</button>
+    <button onclick="showLogin()">Back to Login</button>
   </div>
 
   <!-- To-Do App Section -->
@@ -135,158 +133,46 @@
     <button onclick="addTask()">Add</button>
     <ul id="taskList"></ul>
     <button class="clear-btn" onclick="clearTasks()">Clear All</button>
+
+    <!-- Admin Panel (visible only to admin) -->
+    <div class="admin-panel hidden" id="adminPanel">
+      <h3>Admin User Management</h3>
+      <div class="user-list" id="userList"></div>
+      <input type="email" id="newUserEmail" placeholder="New user email" />
+      <input type="password" id="newUserPassword" placeholder="New user password" />
+      <button onclick="adminAddUser()">Add User</button>
+    </div>
   </div>
 
-  <!-- Admin Panel -->
-  <div class="container hidden" id="adminPanel">
-    <h2>Admin Panel - User Management</h2>
-    <button class="logout-btn" onclick="logout()">Logout</button>
-    <ul id="userList"></ul>
-
-    <h3>Add User</h3>
-    <input type="text" id="newUsername" placeholder="Username" />
-    <input type="password" id="newPassword" placeholder="Password" />
-    <button onclick="addUser()">Add User</button>
-  </div>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
   <script>
-    // Users stored in localStorage, key: users
-    // Format: [{username: "...", password: "..."}, ...]
-    let users = JSON.parse(localStorage.getItem("users")) || [
-      { username: "admin", password: "1234" }
-    ];
+    // Your Firebase config (replace with your actual config from Firebase Console)
+    const firebaseConfig = {
+      apiKey: "AIzaSyA3FUbZhG2qA-lsVVpUJR4UEebhJQBIGLI",
+      authDomain: "todolist-7c38d.firebaseapp.com",
+      projectId: "todolist-7c38d",
+      storageBucket: "todolist-7c38d.firebasestorage.app",
+      messagingSenderId: "1017408235677",
+      appId: "1:1017408235677:web:b5479bc8545ee4cdfa8c74",
+    };
 
-    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let tasks = [];
     let currentUser = null;
+    let isAdmin = false;
 
-    function saveUsers() {
-      localStorage.setItem("users", JSON.stringify(users));
-    }
+    // Admin email (set your admin email here)
+    const adminEmail = "admin@example.com";
 
-    function saveTasks() {
-      localStorage.setItem("tasks", JSON.stringify(tasks));
-    }
-
-    function renderTasks() {
-      const list = document.getElementById("taskList");
-      list.innerHTML = "";
-      tasks.forEach((task, index) => {
-        const li = document.createElement("li");
-        if (task.completed) li.classList.add("completed");
-
-        const span = document.createElement("span");
-        span.className = "task-text";
-        span.innerHTML = task.text;
-
-        if (task.dueDate) {
-          const due = document.createElement("span");
-          due.className = "due-date";
-          due.textContent = `Due: ${task.dueDate}`;
-          span.appendChild(due);
-        }
-
-        span.style.flex = "1";
-        span.onclick = () => toggleComplete(index);
-
-        const editBtn = document.createElement("button");
-        editBtn.textContent = "Edit";
-        editBtn.className = "btn edit-btn";
-        editBtn.onclick = () => editTask(index);
-
-        const delBtn = document.createElement("button");
-        delBtn.textContent = "Delete";
-        delBtn.className = "btn delete-btn";
-        delBtn.onclick = () => deleteTask(index);
-
-        li.appendChild(span);
-        li.appendChild(editBtn);
-        li.appendChild(delBtn);
-        list.appendChild(li);
-      });
-    }
-
-    function renderUserList() {
-      const userList = document.getElementById("userList");
-      userList.innerHTML = "";
-      users.forEach((user, index) => {
-        const li = document.createElement("li");
-        li.textContent = `${user.username} — ${user.password}`;
-        if(user.username !== "admin"){
-          const delBtn = document.createElement("button");
-          delBtn.textContent = "Delete";
-          delBtn.className = "delete-user-btn";
-          delBtn.onclick = () => {
-            if(confirm(`Delete user "${user.username}"?`)){
-              users.splice(index, 1);
-              saveUsers();
-              renderUserList();
-            }
-          };
-          li.appendChild(delBtn);
-        }
-        userList.appendChild(li);
-      });
-    }
-
-    function addUser() {
-      const newUsername = document.getElementById("newUsername").value.trim();
-      const newPassword = document.getElementById("newPassword").value;
-
-      if (!newUsername || !newPassword) {
-        alert("Please enter username and password.");
-        return;
-      }
-      if(users.find(u => u.username === newUsername)) {
-        alert("Username already exists!");
-        return;
-      }
-
-      users.push({ username: newUsername, password: newPassword });
-      saveUsers();
-      renderUserList();
-      document.getElementById("newUsername").value = "";
-      document.getElementById("newPassword").value = "";
-      alert(`User "${newUsername}" added.`);
-    }
-
-    function addTask() {
-      const input = document.getElementById("taskInput");
-      const taskText = input.value.trim();
-      if (!taskText) return;
-
-      const wantsDueDate = confirm("Do you want to add a due date?");
-      let dueDate = "";
-      if (wantsDueDate) {
-        dueDate = prompt("Enter due date (e.g., YYYY-MM-DD):") || "";
-      }
-
-      tasks.push({ text: taskText, completed: false, dueDate: dueDate });
-      saveTasks();
-      renderTasks();
-      input.value = "";
-    }
-
-    function toggleComplete(index) {
-      tasks[index].completed = !tasks[index].completed;
-      saveTasks();
-      renderTasks();
-    }
-
-    function deleteTask(index) {
-      tasks.splice(index, 1);
-      saveTasks();
-      renderTasks();
-    }
-
-    function editTask(index) {
-      const newText = prompt("Edit your task:", tasks[index].text);
-      if (newText !== null && newText.trim() !== "") {
-        tasks[index].text = newText.trim();
-        saveTasks();
-        renderTasks();
-      }
-    }
-
+    // Toggle dark mode
     function toggleDarkMode() {
       const body = document.body;
       const icon = document.getElementById("modeIcon");
@@ -296,88 +182,306 @@
       icon.textContent = darkModeOn ? "☀️" : "🌙";
     }
 
-    function clearTasks() {
-      if (confirm("Are you sure you want to delete all tasks?")) {
-        tasks = [];
-        saveTasks();
-        renderTasks();
+    // Show login/register containers
+    function showLogin() {
+      document.getElementById("registerContainer").classList.add("hidden");
+      document.getElementById("loginContainer").classList.remove("hidden");
+    }
+    function showRegister() {
+      document.getElementById("loginContainer").classList.add("hidden");
+      document.getElementById("registerContainer").classList.remove("hidden");
+    }
+
+    // Register new user
+    async function register() {
+      const email = document.getElementById("regEmail").value.trim();
+      const password = document.getElementById("regPassword").value;
+      if (!email || !password) {
+        alert("Please enter email and password.");
+        return;
+      }
+      try {
+        await auth.createUserWithEmailAndPassword(email, password);
+        alert("Registration successful! Please login.");
+        showLogin();
+      } catch (error) {
+        alert("Error: " + error.message);
       }
     }
 
-    // Authentication and UI management
-    function login() {
-      const userInput = document.getElementById("username").value.trim();
-      const passInput = document.getElementById("password").value;
-
-      const user = users.find(u => u.username === userInput && u.password === passInput);
-
-      if (user) {
-        currentUser = user.username;
-        localStorage.setItem("loggedInUser", currentUser);
-        if (currentUser === "admin") {
-          showAdminPanel();
-        } else {
-          showTodoApp();
-        }
-      } else {
-        alert("Invalid credentials!");
+    // Login user
+    async function login() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      if (!email || !password) {
+        alert("Please enter email and password.");
+        return;
+      }
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+        currentUser = auth.currentUser;
+        isAdmin = (currentUser.email === adminEmail);
+        showTodoApp();
+      } catch (error) {
+        alert("Login failed: " + error.message);
       }
     }
 
-    function logout() {
+    // Logout user
+    async function logout() {
+      await auth.signOut();
       currentUser = null;
-      localStorage.removeItem("loggedInUser");
+      isAdmin = false;
+      tasks = [];
       document.getElementById("todoContainer").classList.add("hidden");
       document.getElementById("adminPanel").classList.add("hidden");
       document.getElementById("loginContainer").classList.remove("hidden");
-      clearInputFields();
+      document.getElementById("taskList").innerHTML = "";
     }
 
+    // Show To-Do app and admin panel if admin
     function showTodoApp() {
       document.getElementById("loginContainer").classList.add("hidden");
-      document.getElementById("adminPanel").classList.add("hidden");
+      document.getElementById("registerContainer").classList.add("hidden");
       document.getElementById("todoContainer").classList.remove("hidden");
-      renderTasks();
+
+      if (isAdmin) {
+        document.getElementById("adminPanel").classList.remove("hidden");
+        loadUsers();
+      } else {
+        document.getElementById("adminPanel").classList.add("hidden");
+      }
+
+      listenTasks();
     }
 
-    function showAdminPanel() {
-      document.getElementById("loginContainer").classList.add("hidden");
-      document.getElementById("todoContainer").classList.add("hidden");
-      document.getElementById("adminPanel").classList.remove("hidden");
-      renderUserList();
+    // Listen to user's tasks in Firestore
+    function listenTasks() {
+      if (!currentUser) return;
+      db.collection("tasks")
+        .where("uid", "==", currentUser.uid)
+        .orderBy("createdAt", "desc")
+        .onSnapshot((snapshot) => {
+          tasks = [];
+          snapshot.forEach((doc) => {
+            tasks.push({ id: doc.id, ...doc.data() });
+          });
+          renderTasks();
+        });
     }
 
-    function clearInputFields() {
-      document.getElementById("username").value = "";
-      document.getElementById("password").value = "";
-      document.getElementById("taskInput").value = "";
-      document.getElementById("newUsername").value = "";
-      document.getElementById("newPassword").value = "";
+    // Render tasks
+    function renderTasks() {
+      const list = document.getElementById("taskList");
+      list.innerHTML = "";
+      tasks.forEach((task, index) => {
+        const li = document.createElement("li");
+        if (task.completed) li.classList.add("completed");
+
+        const span = document.createElement("span");
+        span.className = "task-text";
+        span.textContent = task.text;
+
+        if (task.dueDate) {
+          const due = document.createElement("span");
+          due.className = "due-date";
+          due.textContent = `Due: ${task.dueDate}`;
+          span.appendChild(document.createElement("br"));
+          span.appendChild(due);
+        }
+
+        span.style.flex = "1";
+        span.onclick = () => toggleComplete(task.id, task.completed);
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Edit";
+        editBtn.className = "btn edit-btn";
+        editBtn.onclick = () => editTask(task.id, task.text);
+
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Delete";
+        delBtn.className = "btn delete-btn";
+        delBtn.onclick = () => deleteTask(task.id);
+
+        li.appendChild(span);
+        li.appendChild(editBtn);
+        li.appendChild(delBtn);
+        list.appendChild(li);
+      });
     }
 
-    // Initial setup
+    // Add new task
+    async function addTask() {
+      const input = document.getElementById("taskInput");
+      const taskText = input.value.trim();
+      if (!taskText) return;
+
+      let dueDate = "";
+      if (confirm("Do you want to add a due date?")) {
+        dueDate = prompt("Enter due date (e.g., 2025-06-01):") || "";
+      }
+
+      try {
+        await db.collection("tasks").add({
+          uid: currentUser.uid,
+          text: taskText,
+          completed: false,
+          dueDate: dueDate,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        input.value = "";
+      } catch (error) {
+        alert("Error adding task: " + error.message);
+      }
+    }
+
+    // Toggle completed state
+    async function toggleComplete(taskId, currentState) {
+      try {
+        await db.collection("tasks").doc(taskId).update({
+          completed: !currentState
+        });
+      } catch (error) {
+        alert("Error updating task: " + error.message);
+      }
+    }
+
+    // Delete task
+    async function deleteTask(taskId) {
+      if (!confirm("Delete this task?")) return;
+      try {
+        await db.collection("tasks").doc(taskId).delete();
+      } catch (error) {
+        alert("Error deleting task: " + error.message);
+      }
+    }
+
+    // Edit task
+    async function editTask(taskId, oldText) {
+      const newText = prompt("Edit your task:", oldText);
+      if (newText !== null && newText.trim() !== "") {
+        try {
+          await db.collection("tasks").doc(taskId).update({ text: newText.trim() });
+        } catch (error) {
+          alert("Error editing task: " + error.message);
+        }
+      }
+    }
+
+    // Clear all tasks for current user
+    async function clearTasks() {
+      if (!confirm("Are you sure you want to delete all tasks?")) return;
+      try {
+        const snapshot = await db.collection("tasks").where("uid", "==", currentUser.uid).get();
+        const batch = db.batch();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+      } catch (error) {
+        alert("Error clearing tasks: " + error.message);
+      }
+    }
+
+    // Admin: Load all users
+    async function loadUsers() {
+      const userListDiv = document.getElementById("userList");
+      userListDiv.innerHTML = "Loading users...";
+      try {
+        // Firebase does NOT allow listing users from client SDK for security reasons.
+        // To list users, you need Firebase Admin SDK on a backend server.
+        // As a workaround, you can store user emails in Firestore when users register or login.
+
+        const usersSnapshot = await db.collection("users").get();
+        userListDiv.innerHTML = "";
+        if (usersSnapshot.empty) {
+          userListDiv.textContent = "No users found.";
+          return;
+        }
+        usersSnapshot.forEach(doc => {
+          const user = doc.data();
+          const div = document.createElement("div");
+          div.className = "user-item";
+          div.textContent = user.email;
+          if (user.email !== adminEmail) {
+            const delBtn = document.createElement("button");
+            delBtn.textContent = "Delete";
+            delBtn.onclick = () => adminDeleteUser(doc.id, user.email);
+            div.appendChild(delBtn);
+          }
+          userListDiv.appendChild(div);
+        });
+      } catch (error) {
+        userListDiv.textContent = "Error loading users: " + error.message;
+      }
+    }
+
+    // Admin: Add user (creates new user with email and password)
+    async function adminAddUser() {
+      const email = document.getElementById("newUserEmail").value.trim();
+      const password = document.getElementById("newUserPassword").value;
+      if (!email || !password) {
+        alert("Enter email and password for new user.");
+        return;
+      }
+      alert("Note: Admin cannot create users client-side with Firebase Auth without backend. " +
+        "You need a backend or use Firebase Console to create users.");
+    }
+
+    // Admin: Delete user
+    async function adminDeleteUser(docId, email) {
+      if (!confirm(`Delete user ${email} and their tasks? This cannot be undone.`)) return;
+
+      try {
+        // Delete user data from users collection
+        await db.collection("users").doc(docId).delete();
+
+        // Delete user's tasks
+        const tasksSnapshot = await db.collection("tasks").where("uid", "==", docId).get();
+        const batch = db.batch();
+        tasksSnapshot.forEach(taskDoc => batch.delete(taskDoc.ref));
+        await batch.commit();
+
+        alert(`User ${email} and tasks deleted. To fully delete Firebase Auth user, use Firebase Console or backend Admin SDK.`);
+        loadUsers();
+      } catch (error) {
+        alert("Error deleting user: " + error.message);
+      }
+    }
+
+    // On auth state change (auto-login if still logged in)
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        currentUser = user;
+        isAdmin = (user.email === adminEmail);
+
+        // Save user email in Firestore users collection for admin panel
+        const userRef = db.collection("users").doc(user.uid);
+        const doc = await userRef.get();
+        if (!doc.exists) {
+          await userRef.set({ email: user.email });
+        }
+
+        showTodoApp();
+      } else {
+        currentUser = null;
+        isAdmin = false;
+        document.getElementById("todoContainer").classList.add("hidden");
+        document.getElementById("loginContainer").classList.remove("hidden");
+      }
+    });
+
+    // Dark mode load from localStorage
     window.onload = () => {
       if (localStorage.getItem("darkMode") === "true") {
         document.body.classList.add("dark-mode");
         document.getElementById("modeIcon").textContent = "☀️";
       }
-
-      const loggedInUser = localStorage.getItem("loggedInUser");
-      if (loggedInUser) {
-        currentUser = loggedInUser;
-        if (currentUser === "admin") {
-          showAdminPanel();
-        } else {
-          showTodoApp();
-        }
-      }
     };
 
-    document.getElementById("taskInput").addEventListener("keypress", function (e) {
-      if (e.key === "Enter") {
-        addTask();
-      }
+    // Allow enter key to add task
+    document.getElementById("taskInput").addEventListener("keypress", function(e) {
+      if (e.key === "Enter") addTask();
     });
+
   </script>
 </body>
 </html>
