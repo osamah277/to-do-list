@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Advanced To-Do List</title>
+  <title>To-Do List with Login</title>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -15,58 +18,47 @@
       background-color: #222;
       color: #eee;
     }
-    h1 {
-      text-align: center;
-    }
-    .todo-container {
-      max-width: 400px;
-      margin: 0 auto;
-      background: #fff;
+    .container {
+      max-width: 500px;
+      margin: auto;
       padding: 20px;
+      background: #fff;
       border-radius: 8px;
       box-shadow: 0 0 10px #ccc;
     }
-    .dark-mode .todo-container {
+    .dark-mode .container {
       background: #333;
-      box-shadow: 0 0 10px #555;
     }
-    input[type="text"] {
-      width: 70%;
+    input, button {
       padding: 10px;
-      margin-right: 5px;
-    }
-    button {
-      padding: 10px;
-    }
-    ul {
-      list-style-type: none;
-      padding: 0;
-    }
-    li {
-      padding: 8px;
-      background: #e0e0e0;
       margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .btn {
+      margin: 4px 0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .edit-btn { background: orange; color: white; }
+    .delete-btn { background: red; color: white; }
+    .clear-btn { background: #555; color: white; width: 100%; }
+    ul { list-style: none; padding: 0; }
+    li {
+      background: #e0e0e0;
+      margin: 6px 0;
+      padding: 8px;
       border-radius: 4px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    .dark-mode li {
-      background: #444;
-    }
-    li.completed span {
+    .dark-mode li { background: #444; }
+    .completed span {
       text-decoration: line-through;
       color: #888;
     }
-    .btn {
-      margin-left: 5px;
-      padding: 4px 8px;
-      border: none;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .edit-btn { background-color: orange; color: white; }
-    .delete-btn { background-color: red; color: white; }
     .mode-toggle {
       float: right;
       cursor: pointer;
@@ -78,41 +70,160 @@
 </head>
 <body>
   <button class="mode-toggle" onclick="toggleDarkMode()">🌙/☀️</button>
-  <div class="todo-container">
-    <h1>To-Do List</h1>
+
+  <div class="container" id="authSection">
+    <h2>Login or Register</h2>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+    <button onclick="register()">Register</button>
+  </div>
+
+  <div class="container" id="todoSection" style="display:none;">
+    <h2>To-Do List</h2>
     <input type="text" id="taskInput" placeholder="Enter a task..." />
-    <button onclick="addTask()">Add</button>
+    <button onclick="addTask()">Add Task</button>
     <ul id="taskList"></ul>
+    <button class="clear-btn" onclick="clearTasks()">Clear All</button>
+    <button onclick="logout()">Logout</button>
   </div>
 
   <script>
-    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    // 🔧 Replace with your own Firebase config:
+    const firebaseConfig = {
+      apiKey: "AIzaSyCi_EuFo1yzd8gx0dJI-n4d3-nGPe64piA",
+      authDomain: "to-do-list-6219d.firebaseapp.com",
+      projectId: "to-do-list-6219d",
+      storageBucket: "to-do-list-6219d.firebasestorage.app",
+      messagingSenderId: "1097574074164",
+      appId: "1:1097574074164:web:48a8a4328121b93c1ec761"
+    };
 
-    function saveTasks() {
-      localStorage.setItem("tasks", JSON.stringify(tasks));
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let currentUserId = null;
+
+    // Dark Mode Toggle
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
     }
 
+    if (localStorage.getItem("darkMode") === "true") {
+      document.body.classList.add("dark-mode");
+    }
+
+    // Auth Handlers
+    function register() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      auth.createUserWithEmailAndPassword(email, password)
+        .catch(alert);
+    }
+
+    function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      auth.signInWithEmailAndPassword(email, password)
+        .catch(alert);
+    }
+
+    function logout() {
+      auth.signOut();
+    }
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUserId = user.uid;
+        document.getElementById("authSection").style.display = "none";
+        document.getElementById("todoSection").style.display = "block";
+        loadTasks();
+      } else {
+        currentUserId = null;
+        document.getElementById("authSection").style.display = "block";
+        document.getElementById("todoSection").style.display = "none";
+      }
+    });
+
+    // Task Functions
+    async function loadTasks() {
+      const snapshot = await db.collection("users").doc(currentUserId).collection("tasks").get();
+      tasks = [];
+      snapshot.forEach(doc => {
+        tasks.push({ id: doc.id, ...doc.data() });
+      });
+      renderTasks();
+    }
+
+    async function addTask() {
+      const input = document.getElementById("taskInput");
+      const taskText = input.value.trim();
+      if (taskText) {
+        await db.collection("users").doc(currentUserId).collection("tasks").add({
+          text: taskText,
+          completed: false
+        });
+        input.value = "";
+        loadTasks();
+      }
+    }
+
+    async function toggleComplete(taskId, completed) {
+      await db.collection("users").doc(currentUserId).collection("tasks").doc(taskId).update({
+        completed: !completed
+      });
+      loadTasks();
+    }
+
+    async function deleteTask(taskId) {
+      await db.collection("users").doc(currentUserId).collection("tasks").doc(taskId).delete();
+      loadTasks();
+    }
+
+    async function editTask(taskId, currentText) {
+      const newText = prompt("Edit your task:", currentText);
+      if (newText && newText.trim() !== "") {
+        await db.collection("users").doc(currentUserId).collection("tasks").doc(taskId).update({
+          text: newText.trim()
+        });
+        loadTasks();
+      }
+    }
+
+    async function clearTasks() {
+      if (confirm("Delete all tasks?")) {
+        const snapshot = await db.collection("users").doc(currentUserId).collection("tasks").get();
+        const batch = db.batch();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        loadTasks();
+      }
+    }
+
+    // Render
     function renderTasks() {
       const list = document.getElementById("taskList");
       list.innerHTML = "";
-      tasks.forEach((task, index) => {
+      tasks.forEach(task => {
         const li = document.createElement("li");
         li.className = task.completed ? "completed" : "";
 
         const span = document.createElement("span");
         span.textContent = task.text;
         span.style.flex = "1";
-        span.onclick = () => toggleComplete(index);
+        span.onclick = () => toggleComplete(task.id, task.completed);
 
         const editBtn = document.createElement("button");
         editBtn.textContent = "Edit";
         editBtn.className = "btn edit-btn";
-        editBtn.onclick = () => editTask(index);
+        editBtn.onclick = () => editTask(task.id, task.text);
 
         const delBtn = document.createElement("button");
         delBtn.textContent = "Delete";
         delBtn.className = "btn delete-btn";
-        delBtn.onclick = () => deleteTask(index);
+        delBtn.onclick = () => deleteTask(task.id);
 
         li.appendChild(span);
         li.appendChild(editBtn);
@@ -120,45 +231,6 @@
         list.appendChild(li);
       });
     }
-
-    function addTask() {
-      const input = document.getElementById("taskInput");
-      const taskText = input.value.trim();
-      if (taskText) {
-        tasks.push({ text: taskText, completed: false });
-        saveTasks();
-        renderTasks();
-        input.value = "";
-      }
-    }
-
-    function toggleComplete(index) {
-      tasks[index].completed = !tasks[index].completed;
-      saveTasks();
-      renderTasks();
-    }
-
-    function deleteTask(index) {
-      tasks.splice(index, 1);
-      saveTasks();
-      renderTasks();
-    }
-
-    function editTask(index) {
-      const newText = prompt("Edit your task:", tasks[index].text);
-      if (newText !== null && newText.trim() !== "") {
-        tasks[index].text = newText.trim();
-        saveTasks();
-        renderTasks();
-      }
-    }
-
-    function toggleDarkMode() {
-      document.body.classList.toggle("dark-mode");
-    }
-
-    // Initial render
-    renderTasks();
   </script>
 </body>
 </html>
