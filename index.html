@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Advanced To-Do List with Due Dates</title>
+  <title>Advanced To-Do List with Custom Due Date Input</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -31,12 +31,7 @@
       box-shadow: 0 0 10px #555;
     }
     input[type="text"] {
-      width: 50%;
-      padding: 10px;
-      margin-right: 5px;
-      box-sizing: border-box;
-    }
-    input[type="date"] {
+      width: 70%;
       padding: 10px;
       margin-right: 5px;
       box-sizing: border-box;
@@ -88,6 +83,62 @@
       margin-left: 10px;
       font-size: 0.85em;
     }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0; top: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 320px;
+      text-align: center;
+      box-shadow: 0 0 10px #333;
+      color: black;
+    }
+    .dark-mode .modal-content {
+      background: #444;
+      color: white;
+    }
+    .modal-content button {
+      margin: 10px;
+      padding: 8px 20px;
+      cursor: pointer;
+      border-radius: 5px;
+      border: none;
+      font-weight: bold;
+    }
+    #yesBtn {
+      background-color: #28a745;
+      color: white;
+    }
+    #noBtn {
+      background-color: #dc3545;
+      color: white;
+    }
+    #dateAddBtn {
+      background-color: #28a745;
+      color: white;
+    }
+    #dateCancelBtn {
+      background-color: #dc3545;
+      color: white;
+    }
+    #dueDateInput {
+      padding: 6px 10px;
+      font-size: 1em;
+      width: 90%;
+      margin-top: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
   </style>
 </head>
 <body>
@@ -95,14 +146,46 @@
   <div class="todo-container">
     <h1>To-Do List</h1>
     <input type="text" id="taskInput" placeholder="Enter a task..." />
-    <input type="date" id="dueDateInput" />
-    <button onclick="addTask()">Add</button>
+    <button id="addBtn">Add</button>
     <ul id="taskList"></ul>
     <button class="clear-btn" onclick="clearTasks()">Clear All</button>
   </div>
 
+  <!-- Modal 1: Yes/No for due date question -->
+  <div id="dueDateModal" class="modal">
+    <div id="dueDateModalContent" class="modal-content">
+      <p>Do you want to add a due date?</p>
+      <button id="yesBtn">Yes</button>
+      <button id="noBtn">No</button>
+    </div>
+  </div>
+
+  <!-- Modal 2: Due date input -->
+  <div id="dueDateInputModal" class="modal">
+    <div id="dueDateInputModalContent" class="modal-content">
+      <p>Please select a due date:</p>
+      <input type="date" id="dueDateInput" />
+      <br />
+      <button id="dateAddBtn">Add</button>
+      <button id="dateCancelBtn">Cancel</button>
+    </div>
+  </div>
+
   <script>
     let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+    const modal = document.getElementById("dueDateModal");
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn = document.getElementById("noBtn");
+    const addBtn = document.getElementById("addBtn");
+    const input = document.getElementById("taskInput");
+    const modalContent = document.getElementById("dueDateModalContent");
+
+    const dateModal = document.getElementById("dueDateInputModal");
+    const dateInput = document.getElementById("dueDateInput");
+    const dateAddBtn = document.getElementById("dateAddBtn");
+    const dateCancelBtn = document.getElementById("dateCancelBtn");
+    const dateModalContent = document.getElementById("dueDateInputModalContent");
 
     function saveTasks() {
       localStorage.setItem("tasks", JSON.stringify(tasks));
@@ -127,7 +210,6 @@
           const dueSpan = document.createElement("small");
           dueSpan.textContent = `(Due: ${task.due})`;
 
-          // Highlight overdue or today
           if (!task.completed && task.due < today) {
             dueSpan.style.color = "red";
           } else if (!task.completed && task.due === today) {
@@ -154,20 +236,66 @@
       });
     }
 
-    function addTask() {
-      const input = document.getElementById("taskInput");
-      const dueInput = document.getElementById("dueDateInput");
+    function addTaskWithDueDate(dueDate = "") {
       const taskText = input.value.trim();
-      const dueDate = dueInput.value;
+      if (!taskText) return;
 
-      if (taskText) {
-        tasks.push({ text: taskText, completed: false, due: dueDate });
-        saveTasks();
-        renderTasks();
-        input.value = "";
-        dueInput.value = "";
+      if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+        alert("Invalid date format. Please use YYYY-MM-DD.");
+        return;
       }
+
+      tasks.push({ text: taskText, completed: false, due: dueDate });
+      saveTasks();
+      renderTasks();
+      input.value = "";
     }
+
+    // Show the first modal on add button click
+    addBtn.addEventListener("click", () => {
+      if (!input.value.trim()) return;
+
+      modal.style.display = "flex";
+      if (document.body.classList.contains("dark-mode")) {
+        modalContent.classList.add("dark-mode");
+      } else {
+        modalContent.classList.remove("dark-mode");
+      }
+    });
+
+    yesBtn.addEventListener("click", () => {
+      modal.style.display = "none";
+
+      // Show date input modal
+      dateInput.value = ""; // Reset date input
+      dateModal.style.display = "flex";
+
+      if (document.body.classList.contains("dark-mode")) {
+        dateModalContent.classList.add("dark-mode");
+      } else {
+        dateModalContent.classList.remove("dark-mode");
+      }
+    });
+
+    noBtn.addEventListener("click", () => {
+      modal.style.display = "none";
+      addTaskWithDueDate("");
+    });
+
+    dateAddBtn.addEventListener("click", () => {
+      const selectedDate = dateInput.value;
+      if (!selectedDate) {
+        alert("Please select a date or press Cancel.");
+        return;
+      }
+      dateModal.style.display = "none";
+      addTaskWithDueDate(selectedDate);
+    });
+
+    dateCancelBtn.addEventListener("click", () => {
+      dateModal.style.display = "none";
+      // Do nothing, don't add task
+    });
 
     function toggleComplete(index) {
       tasks[index].completed = !tasks[index].completed;
@@ -183,19 +311,21 @@
 
     function editTask(index) {
       const newText = prompt("Edit your task:", tasks[index].text);
-      const newDue = prompt("Edit due date (YYYY-MM-DD):", tasks[index].due || "");
+      if (newText === null || newText.trim() === "") return;
 
-      if (newText !== null && newText.trim() !== "") {
-        tasks[index].text = newText.trim();
-        tasks[index].due = newDue || "";
-        saveTasks();
-        renderTasks();
+      let newDue = tasks[index].due || "";
+      if (confirm("Do you want to edit the due date?")) {
+        newDue = prompt("Enter due date (YYYY-MM-DD):", newDue);
+        if (newDue && !/^\d{4}-\d{2}-\d{2}$/.test(newDue)) {
+          alert("Invalid date format. Please use YYYY-MM-DD.");
+          newDue = "";
+        }
       }
-    }
 
-    function toggleDarkMode() {
-      document.body.classList.toggle("dark-mode");
-      localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
+      tasks[index].text = newText.trim();
+      tasks[index].due = newDue;
+      saveTasks();
+      renderTasks();
     }
 
     function clearTasks() {
@@ -206,17 +336,9 @@
       }
     }
 
-    // Notifications for tasks due today
-    function checkReminders() {
-      if (!("Notification" in window)) return;
-      if (Notification.permission !== "granted") return;
-
-      const today = new Date().toISOString().split("T")[0];
-      tasks.forEach(task => {
-        if (!task.completed && task.due === today) {
-          new Notification("Task Due Today", { body: task.text });
-        }
-      });
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
     }
 
     window.onload = () => {
@@ -224,19 +346,11 @@
         document.body.classList.add("dark-mode");
       }
       renderTasks();
-      if ("Notification" in window) {
-        Notification.requestPermission().then(permission => {
-          if (permission === "granted") {
-            checkReminders();
-          }
-        });
-      }
     };
 
-    // Support adding task via Enter key
-    document.getElementById("taskInput").addEventListener("keypress", function (e) {
+    input.addEventListener("keypress", function(e) {
       if (e.key === "Enter") {
-        addTask();
+        addBtn.click();
       }
     });
   </script>
