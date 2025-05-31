@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Advanced To-Do List</title>
+  <title>To-Do List with Admin & Auth</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -15,33 +15,46 @@
       background-color: #222;
       color: #eee;
     }
-    h1 {
-      text-align: center;
-    }
-    .todo-container {
+    .container {
       max-width: 400px;
-      margin: 0 auto;
+      margin: 0 auto 20px;
       background: #fff;
       padding: 20px;
       border-radius: 8px;
       box-shadow: 0 0 10px #ccc;
     }
-    .dark-mode .todo-container {
+    .dark-mode .container {
       background: #333;
       box-shadow: 0 0 10px #555;
     }
-    input[type="text"] {
+    input[type="text"], input[type="password"] {
       width: 70%;
       padding: 10px;
-      margin-right: 5px;
+      margin-bottom: 10px;
     }
     button {
       padding: 10px;
+      cursor: pointer;
     }
-    ul {
-      list-style-type: none;
-      padding: 0;
+    .btn {
+      margin: 5px 0;
+      padding: 6px 10px;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
     }
+    .edit-btn { background-color: orange; color: white; }
+    .delete-btn { background-color: red; color: white; }
+    .clear-btn { background-color: #555; color: white; width: 100%; margin-top: 10px; }
+    .mode-toggle {
+      float: right;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+    ul { list-style-type: none; padding: 0; }
     li {
       padding: 8px;
       background: #e0e0e0;
@@ -51,127 +64,104 @@
       justify-content: space-between;
       align-items: center;
     }
-    .dark-mode li {
-      background: #444;
-    }
-    li.completed span {
+    .dark-mode li { background: #444; }
+    .completed .task-text {
       text-decoration: line-through;
       color: #888;
     }
-    .btn {
-      margin-left: 5px;
-      padding: 4px 8px;
-      border: none;
-      cursor: pointer;
-      border-radius: 4px;
+    .due-date {
+      display: block;
+      font-size: 0.8em;
+      color: #555;
+      margin-top: 4px;
     }
-    .edit-btn { background-color: orange; color: white; }
-    .delete-btn { background-color: red; color: white; }
-    .clear-btn { background-color: #555; color: white; margin-top: 10px; width: 100%; }
-    .mode-toggle {
-      float: right;
-      cursor: pointer;
-      background: none;
-      border: none;
-      font-size: 20px;
-      line-height: 1;
+    .dark-mode .due-date {
+      color: #ccc;
     }
-
-    /* Modal styles */
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; right:0; bottom:0;
-      background: rgba(0,0,0,0.5);
+    .hidden {
       display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
     }
-    .modal-overlay.active {
-      display: flex;
-    }
-    .modal {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      max-width: 320px;
-      width: 90%;
-      box-shadow: 0 0 15px #333;
-      text-align: center;
-      color: #222;
-      transition: background-color 0.3s, color 0.3s;
-    }
-    .dark-mode .modal {
-      background: #444;
-      color: #eee;
-      box-shadow: 0 0 15px #000;
-    }
-    .modal button {
-      margin: 10px 5px 0 5px;
-      padding: 8px 16px;
+    /* Admin panel logout button */
+    #adminPanel button.logout-btn {
+      margin-bottom: 15px;
+      padding: 8px 12px;
+      background-color: #d9534f;
+      color: white;
       border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .modal .btn-yes {
-      background-color: #28a745;
-      color: white;
-    }
-    .modal .btn-no {
-      background-color: #dc3545;
-      color: white;
-    }
-    .modal input[type="date"] {
-      margin-top: 10px;
-      padding: 8px;
-      width: 100%;
-      font-size: 14px;
       border-radius: 4px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
+      cursor: pointer;
     }
-    .dark-mode .modal input[type="date"] {
-      background: #666;
-      border: 1px solid #999;
-      color: #eee;
+    #adminPanel ul {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+    }
+    #adminPanel li {
+      background: #ddd;
+      margin-bottom: 6px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #adminPanel .delete-user-btn {
+      background-color: red;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      cursor: pointer;
+      margin-left: 10px;
     }
   </style>
 </head>
 <body>
-  <button id="modeToggleBtn" class="mode-toggle" onclick="toggleDarkMode()">🌙</button>
-  <div class="todo-container">
+  <button class="mode-toggle" onclick="toggleDarkMode()" id="modeIcon">🌙</button>
+
+  <!-- Login Section -->
+  <div class="container" id="loginContainer">
+    <h2>Login</h2>
+    <input type="text" id="username" placeholder="Username" /><br />
+    <input type="password" id="password" placeholder="Password" /><br />
+    <button onclick="login()">Login</button>
+  </div>
+
+  <!-- To-Do App Section -->
+  <div class="container hidden" id="todoContainer">
     <h1>To-Do List</h1>
+    <button onclick="logout()">Logout</button><br /><br />
     <input type="text" id="taskInput" placeholder="Enter a task..." />
-    <button onclick="startAddTask()">Add</button>
+    <button onclick="addTask()">Add</button>
     <ul id="taskList"></ul>
     <button class="clear-btn" onclick="clearTasks()">Clear All</button>
   </div>
 
-  <!-- Modal for Yes/No question -->
-  <div id="confirmModal" class="modal-overlay">
-    <div class="modal">
-      <p>Do you want to add a due date for this task?</p>
-      <button class="btn-yes" id="confirmYesBtn">Yes</button>
-      <button class="btn-no" id="confirmNoBtn">No</button>
-    </div>
-  </div>
+  <!-- Admin Panel -->
+  <div class="container hidden" id="adminPanel">
+    <h2>Admin Panel - User Management</h2>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+    <ul id="userList"></ul>
 
-  <!-- Modal for entering due date -->
-  <div id="dateModal" class="modal-overlay">
-    <div class="modal">
-      <p>Enter due date:</p>
-      <input type="date" id="dueDateInput" />
-      <div>
-        <button class="btn-yes" id="dateOkBtn">OK</button>
-        <button class="btn-no" id="dateCancelBtn">Cancel</button>
-      </div>
-    </div>
+    <h3>Add User</h3>
+    <input type="text" id="newUsername" placeholder="Username" />
+    <input type="password" id="newPassword" placeholder="Password" />
+    <button onclick="addUser()">Add User</button>
   </div>
 
   <script>
+    // Users stored in localStorage, key: users
+    // Format: [{username: "...", password: "..."}, ...]
+    let users = JSON.parse(localStorage.getItem("users")) || [
+      { username: "admin", password: "1234" }
+    ];
+
     let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-    let currentEditingIndex = null; // for edit task
+    let currentUser = null;
+
+    function saveUsers() {
+      localStorage.setItem("users", JSON.stringify(users));
+    }
 
     function saveTasks() {
       localStorage.setItem("tasks", JSON.stringify(tasks));
@@ -182,17 +172,26 @@
       list.innerHTML = "";
       tasks.forEach((task, index) => {
         const li = document.createElement("li");
-        li.className = task.completed ? "completed" : "";
+        if (task.completed) li.classList.add("completed");
 
         const span = document.createElement("span");
-        span.textContent = task.text + (task.dueDate ? ` (Due: ${task.dueDate})` : "");
+        span.className = "task-text";
+        span.innerHTML = task.text;
+
+        if (task.dueDate) {
+          const due = document.createElement("span");
+          due.className = "due-date";
+          due.textContent = `Due: ${task.dueDate}`;
+          span.appendChild(due);
+        }
+
         span.style.flex = "1";
         span.onclick = () => toggleComplete(index);
 
         const editBtn = document.createElement("button");
         editBtn.textContent = "Edit";
         editBtn.className = "btn edit-btn";
-        editBtn.onclick = () => startEditTask(index);
+        editBtn.onclick = () => editTask(index);
 
         const delBtn = document.createElement("button");
         delBtn.textContent = "Delete";
@@ -204,6 +203,67 @@
         li.appendChild(delBtn);
         list.appendChild(li);
       });
+    }
+
+    function renderUserList() {
+      const userList = document.getElementById("userList");
+      userList.innerHTML = "";
+      users.forEach((user, index) => {
+        const li = document.createElement("li");
+        li.textContent = `${user.username} — ${user.password}`;
+        if(user.username !== "admin"){
+          const delBtn = document.createElement("button");
+          delBtn.textContent = "Delete";
+          delBtn.className = "delete-user-btn";
+          delBtn.onclick = () => {
+            if(confirm(`Delete user "${user.username}"?`)){
+              users.splice(index, 1);
+              saveUsers();
+              renderUserList();
+            }
+          };
+          li.appendChild(delBtn);
+        }
+        userList.appendChild(li);
+      });
+    }
+
+    function addUser() {
+      const newUsername = document.getElementById("newUsername").value.trim();
+      const newPassword = document.getElementById("newPassword").value;
+
+      if (!newUsername || !newPassword) {
+        alert("Please enter username and password.");
+        return;
+      }
+      if(users.find(u => u.username === newUsername)) {
+        alert("Username already exists!");
+        return;
+      }
+
+      users.push({ username: newUsername, password: newPassword });
+      saveUsers();
+      renderUserList();
+      document.getElementById("newUsername").value = "";
+      document.getElementById("newPassword").value = "";
+      alert(`User "${newUsername}" added.`);
+    }
+
+    function addTask() {
+      const input = document.getElementById("taskInput");
+      const taskText = input.value.trim();
+      if (!taskText) return;
+
+      const wantsDueDate = confirm("Do you want to add a due date?");
+      let dueDate = "";
+      if (wantsDueDate) {
+        dueDate = prompt("Enter due date (e.g., YYYY-MM-DD):") || "";
+      }
+
+      tasks.push({ text: taskText, completed: false, dueDate: dueDate });
+      saveTasks();
+      renderTasks();
+      input.value = "";
     }
 
     function toggleComplete(index) {
@@ -218,107 +278,22 @@
       renderTasks();
     }
 
-    // Dark mode toggle
-    const modeToggleBtn = document.getElementById("modeToggleBtn");
+    function editTask(index) {
+      const newText = prompt("Edit your task:", tasks[index].text);
+      if (newText !== null && newText.trim() !== "") {
+        tasks[index].text = newText.trim();
+        saveTasks();
+        renderTasks();
+      }
+    }
 
     function toggleDarkMode() {
-      document.body.classList.toggle("dark-mode");
-      const isDark = document.body.classList.contains("dark-mode");
-      localStorage.setItem("darkMode", isDark);
-      modeToggleBtn.textContent = isDark ? "☀️" : "🌙";
-    }
-
-    // Modal elements
-    const confirmModal = document.getElementById("confirmModal");
-    const dateModal = document.getElementById("dateModal");
-    const dueDateInput = document.getElementById("dueDateInput");
-    const confirmYesBtn = document.getElementById("confirmYesBtn");
-    const confirmNoBtn = document.getElementById("confirmNoBtn");
-    const dateOkBtn = document.getElementById("dateOkBtn");
-    const dateCancelBtn = document.getElementById("dateCancelBtn");
-
-    // State for new task or edit task
-    let newTaskText = "";
-    let editingMode = false;
-
-    // Start add task flow with modal
-    function startAddTask() {
-      const input = document.getElementById("taskInput");
-      const taskText = input.value.trim();
-      if (!taskText) return alert("Please enter a task.");
-
-      newTaskText = taskText;
-      editingMode = false;
-      input.value = "";
-
-      showConfirmModal();
-    }
-
-    // Start edit task flow with modal
-    function startEditTask(index) {
-      currentEditingIndex = index;
-      editingMode = true;
-
-      const task = tasks[index];
-      newTaskText = task.text;
-
-      // Pre-fill input with current text
-      const input = document.getElementById("taskInput");
-      input.value = task.text;
-
-      showConfirmModal(task.dueDate || "");
-    }
-
-    function showConfirmModal(existingDueDate = "") {
-      confirmModal.classList.add("active");
-      dueDateInput.value = existingDueDate;
-    }
-
-    function hideConfirmModal() {
-      confirmModal.classList.remove("active");
-    }
-
-    function showDateModal() {
-      dateModal.classList.add("active");
-    }
-
-    function hideDateModal() {
-      dateModal.classList.remove("active");
-    }
-
-    // Confirm modal button handlers
-    confirmYesBtn.onclick = () => {
-      hideConfirmModal();
-      showDateModal();
-    };
-    confirmNoBtn.onclick = () => {
-      hideConfirmModal();
-      saveTaskWithDueDate("");
-    };
-
-    // Date modal buttons
-    dateOkBtn.onclick = () => {
-      const dateValue = dueDateInput.value;
-      saveTaskWithDueDate(dateValue);
-      hideDateModal();
-    };
-    dateCancelBtn.onclick = () => {
-      saveTaskWithDueDate("");
-      hideDateModal();
-    };
-
-    function saveTaskWithDueDate(dueDate) {
-      if (editingMode && currentEditingIndex !== null) {
-        // Edit existing task
-        tasks[currentEditingIndex].text = newTaskText;
-        tasks[currentEditingIndex].dueDate = dueDate || "";
-        currentEditingIndex = null;
-      } else {
-        // Add new task
-        tasks.push({ text: newTaskText, completed: false, dueDate: dueDate || "" });
-      }
-      saveTasks();
-      renderTasks();
+      const body = document.body;
+      const icon = document.getElementById("modeIcon");
+      body.classList.toggle("dark-mode");
+      const darkModeOn = body.classList.contains("dark-mode");
+      localStorage.setItem("darkMode", darkModeOn);
+      icon.textContent = darkModeOn ? "☀️" : "🌙";
     }
 
     function clearTasks() {
@@ -329,20 +304,78 @@
       }
     }
 
+    // Authentication and UI management
+    function login() {
+      const userInput = document.getElementById("username").value.trim();
+      const passInput = document.getElementById("password").value;
+
+      const user = users.find(u => u.username === userInput && u.password === passInput);
+
+      if (user) {
+        currentUser = user.username;
+        localStorage.setItem("loggedInUser", currentUser);
+        if (currentUser === "admin") {
+          showAdminPanel();
+        } else {
+          showTodoApp();
+        }
+      } else {
+        alert("Invalid credentials!");
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      localStorage.removeItem("loggedInUser");
+      document.getElementById("todoContainer").classList.add("hidden");
+      document.getElementById("adminPanel").classList.add("hidden");
+      document.getElementById("loginContainer").classList.remove("hidden");
+      clearInputFields();
+    }
+
+    function showTodoApp() {
+      document.getElementById("loginContainer").classList.add("hidden");
+      document.getElementById("adminPanel").classList.add("hidden");
+      document.getElementById("todoContainer").classList.remove("hidden");
+      renderTasks();
+    }
+
+    function showAdminPanel() {
+      document.getElementById("loginContainer").classList.add("hidden");
+      document.getElementById("todoContainer").classList.add("hidden");
+      document.getElementById("adminPanel").classList.remove("hidden");
+      renderUserList();
+    }
+
+    function clearInputFields() {
+      document.getElementById("username").value = "";
+      document.getElementById("password").value = "";
+      document.getElementById("taskInput").value = "";
+      document.getElementById("newUsername").value = "";
+      document.getElementById("newPassword").value = "";
+    }
+
+    // Initial setup
     window.onload = () => {
       if (localStorage.getItem("darkMode") === "true") {
         document.body.classList.add("dark-mode");
-        modeToggleBtn.textContent = "☀️";
-      } else {
-        modeToggleBtn.textContent = "🌙";
+        document.getElementById("modeIcon").textContent = "☀️";
       }
-      renderTasks();
+
+      const loggedInUser = localStorage.getItem("loggedInUser");
+      if (loggedInUser) {
+        currentUser = loggedInUser;
+        if (currentUser === "admin") {
+          showAdminPanel();
+        } else {
+          showTodoApp();
+        }
+      }
     };
 
-    // Support adding task via Enter key in input (starts modal flow)
     document.getElementById("taskInput").addEventListener("keypress", function (e) {
       if (e.key === "Enter") {
-        startAddTask();
+        addTask();
       }
     });
   </script>
