@@ -9,9 +9,6 @@
   <link rel="icon" type="image/png" sizes="512x512" href="icons/web-app-manifest-512x512.png" />
   <link rel="manifest" href="icons/site.webmanifest" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <style>
     :root {
       --bg-light: #f4f6f8;
@@ -193,7 +190,7 @@
   </style>
 </head>
 <body>
-  <script src="firebase-config.js"></script>
+
   <button class="mode-toggle" onclick="toggleDarkMode()">🌓</button>
 
   <div class="container">
@@ -215,8 +212,14 @@
 
   <button id="logoutBtn" class="logout-btn hidden" onclick="logout()">Logout</button>
 
+  <!-- Firebase SDKs and config: load first -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="./firebase-config.js"></script> <!-- Your firebaseConfig object -->
+
   <script>
-    // Firebase config
+    // Initialize Firebase after config loaded
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
@@ -290,93 +293,104 @@
       }).catch(err => alert("Error adding task: " + err.message));
     }
 
-    // Delete task
-    function deleteTask(taskId) {
-      const user = auth.currentUser;
-      if (!user) return;
-      db.collection("users").doc(user.uid).collection("tasks").doc(taskId)
-        .delete()
-        .then(() => loadTasks())
-        .catch(err => alert("Error deleting task: " + err.message));
-    }
-
-    // Save edited task text
-    function saveTaskEdit(taskId, inputElem, liElem) {
-      const newText = inputElem.value.trim();
-      if (!newText) {
-        alert("Task text cannot be empty.");
-        return;
-      }
-      const user = auth.currentUser;
-      if (!user) return;
-      db.collection("users").doc(user.uid).collection("tasks").doc(taskId)
-        .update({ text: newText })
-        .then(() => {
-          loadTasks();
-        })
-        .catch(err => alert("Error saving task: " + err.message));
-    }
-
-    // Load tasks and render them
+    // Load tasks from Firestore and display
     function loadTasks() {
       const user = auth.currentUser;
       if (!user) return;
-      db.collection("users").doc(user.uid).collection("tasks").orderBy("createdAt")
+      const list = document.getElementById("taskList");
+      list.innerHTML = "Loading tasks...";
+      db.collection("users").doc(user.uid).collection("tasks")
+        .orderBy("createdAt", "desc")
         .get()
         .then(snapshot => {
-          const list = document.getElementById("taskList");
           list.innerHTML = "";
+          if (snapshot.empty) {
+            list.innerHTML = "<li>No tasks found.</li>";
+            return;
+          }
           snapshot.forEach(doc => {
             const data = doc.data();
             const li = document.createElement("li");
+            li.setAttribute("data-id", doc.id);
 
-            const taskText = document.createElement("span");
-            taskText.className = "task-text";
-            taskText.textContent = data.text;
+            // Task text span
+            const span = document.createElement("span");
+            span.className = "task-text";
+            span.textContent = data.text;
 
+            // Edit button
             const editBtn = document.createElement("button");
-            editBtn.className = "btn edit-btn";
             editBtn.textContent = "Edit";
+            editBtn.className = "btn edit-btn";
+            editBtn.onclick = () => editTask(li, doc.id);
 
-            const deleteBtn = document.createElement("button");
-            deleteBtn.className = "btn delete-btn";
-            deleteBtn.textContent = "Delete";
+            // Delete button
+            const delBtn = document.createElement("button");
+            delBtn.textContent = "Delete";
+            delBtn.className = "btn delete-btn";
+            delBtn.onclick = () => deleteTask(doc.id);
 
-            // Edit button functionality
-            editBtn.onclick = () => {
-              // Replace text span with input field
-              const input = document.createElement("input");
-              input.type = "text";
-              input.value = data.text;
-              input.style.flexGrow = "1";
-              input.style.marginRight = "10px";
-
-              li.replaceChild(input, taskText);
-              editBtn.textContent = "Save";
-              editBtn.classList.remove("edit-btn");
-              editBtn.classList.add("save-btn");
-
-              // Save changes on save button click
-              editBtn.onclick = () => saveTaskEdit(doc.id, input, li);
-            };
-
-            // Delete button functionality
-            deleteBtn.onclick = () => {
-              if (confirm("Delete this task?")) {
-                deleteTask(doc.id);
-              }
-            };
-
-            li.appendChild(taskText);
+            li.appendChild(span);
             li.appendChild(editBtn);
-            li.appendChild(deleteBtn);
+            li.appendChild(delBtn);
+
             list.appendChild(li);
           });
         })
-        .catch(err => alert("Error loading tasks: " + err.message));
+        .catch(err => {
+          alert("Failed to load tasks: " + err.message);
+          list.innerHTML = "";
+        });
     }
 
-    // Auth state listener
+    // Edit task in place
+    function editTask(li, taskId) {
+      const span = li.querySelector(".task-text");
+      const originalText = span.textContent;
+
+      // Create input for editing
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = originalText;
+      input.style.flexGrow = "1";
+
+      // Replace span with input
+      li.replaceChild(input, span);
+
+      // Replace Edit button with Save button
+      const editBtn = li.querySelector(".edit-btn");
+      editBtn.textContent = "Save";
+      editBtn.className = "btn save-btn";
+
+      // On save click
+      editBtn.onclick = () => {
+        const newText = input.value.trim();
+        if (!newText) {
+          alert("Task cannot be empty.");
+          return;
+        }
+        const user = auth.currentUser;
+        if (!user) return alert("Login first.");
+
+        db.collection("users").doc(user.uid).collection("tasks").doc(taskId).update({
+          text: newText
+        }).then(() => {
+          loadTasks();
+        }).catch(err => alert("Update failed: " + err.message));
+      };
+    }
+
+    // Delete task
+    function deleteTask(taskId) {
+      const user = auth.currentUser;
+      if (!user) return alert("Login first.");
+      if (!confirm("Delete this task?")) return;
+      db.collection("users").doc(user.uid).collection("tasks").doc(taskId).delete()
+        .then(() => loadTasks())
+        .catch(err => alert("Delete failed: " + err.message));
+    }
+
+    // Automatically check auth state
     auth.onAuthStateChanged(user => {
       if (user) {
         document.getElementById("loginContainer").classList.add("hidden");
@@ -391,18 +405,5 @@
       }
     });
   </script>
-
-   <!-- Your page content ends here -->
-  </div> <!-- this might close your main container -->
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-
-  <!-- Your Firebase config file -->
-  <script src="firebase-config.js"></script>
-
-  <!-- Your main logic file -->
 </body>
 </html>
