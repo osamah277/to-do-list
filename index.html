@@ -162,6 +162,81 @@
       display: none;
     }
 
+    .logout-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      display: flex;
+      width: 100%;
+      z-index: 999;
+    }
+
+    .half-btn {
+      flex: 1;
+      padding: 20px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      color: white;
+      transition: background-color 0.2s;
+    }
+
+    .half-btn:first-child {
+      background-color: red;
+    }
+
+    .half-btn:last-child {
+      background-color: #007BFF;
+    }
+
+    .half-btn:first-child:hover {
+      background-color: darkred;
+    }
+
+    .half-btn:last-child:hover {
+      background-color: #0056b3;
+    }
+
+    .login-website-btn {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      padding: 20px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      z-index: 999;
+      border-radius: 0;
+    }
+
+    .login-website-btn:hover {
+      background-color: #0056b3;
+    }
+    .top-right-btn {
+      position: fixed;
+      top: 23px;
+      right: 90px; /* adjust if needed to space it from 🌓 */
+      font-size: 0.95rem;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      cursor: pointer;
+      z-index: 1000;
+      transition: background-color 0.2s;
+    }
+    .top-right-btn:hover {
+      background-color: #0056b3;
+    }
+    .dark-mode .top-right-btn {
+      background-color: #0056b3;
+    }
     /* Responsive improvements */
     @media (max-width: 520px) {
       body {
@@ -191,7 +266,10 @@
 </head>
 <body>
 
+  <!-- Top right buttons -->
   <button class="mode-toggle" onclick="toggleDarkMode()">🌓</button>
+  <button id="websiteBtn" class="top-right-btn hidden" onclick="window.open('https://osamah277.github.io/home/')">Visit Website</button>
+
 
   <div class="container">
     <div id="loginContainer">
@@ -210,7 +288,13 @@
     </div>
   </div>
 
-  <button id="logoutBtn" class="logout-btn hidden" onclick="logout()">Logout</button>
+  <div id="bottomBar" class="logout-bar hidden">
+    <!-- Button shown ONLY on login screen -->
+    <button id="websiteBtn" class="login-website-btn" onclick="window.location.href='https://example.com'">Visit Website</button>
+    <!-- Button shown ONLY when logged in -->
+    <button id="logoutBtn" class="logout-btn hidden" onclick="logout()">Logout</button>
+    <button class="half-btn" onclick="window.location.href='https://example.com'">Visit Site</button>
+  </div>
 
   <!-- Firebase SDKs and config: load first -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -247,7 +331,7 @@
           alert("Registration successful! You are now logged in.");
           document.getElementById("loginContainer").classList.add("hidden");
           document.getElementById("todoContainer").classList.remove("hidden");
-          document.getElementById("logoutBtn").classList.remove("hidden");
+          document.getElementById("bottomBar").classList.remove("hidden");
           loadTasks();
         })
         .catch(err => alert("Registration failed: " + err.message));
@@ -261,7 +345,7 @@
         .then(() => {
           document.getElementById("loginContainer").classList.add("hidden");
           document.getElementById("todoContainer").classList.remove("hidden");
-          document.getElementById("logoutBtn").classList.remove("hidden");
+          document.getElementById("bottomBar").classList.remove("hidden");
           loadTasks();
         })
         .catch(err => alert("Login failed: " + err.message));
@@ -272,7 +356,7 @@
       auth.signOut().then(() => {
         document.getElementById("loginContainer").classList.remove("hidden");
         document.getElementById("todoContainer").classList.add("hidden");
-        document.getElementById("logoutBtn").classList.add("hidden");
+        document.getElementById("bottomBar").classList.add("hidden");
         document.getElementById("taskList").innerHTML = "";
       });
     }
@@ -392,16 +476,23 @@
 
     // Automatically check auth state
     auth.onAuthStateChanged(user => {
+      const websiteBtn = document.getElementById("websiteBtn");
+
       if (user) {
+        // Logged in
         document.getElementById("loginContainer").classList.add("hidden");
         document.getElementById("todoContainer").classList.remove("hidden");
         document.getElementById("logoutBtn").classList.remove("hidden");
+        websiteBtn.classList.remove("hidden"); // ✅ show website button after login
+
         loadTasks();
       } else {
+        // Logged out
         document.getElementById("loginContainer").classList.remove("hidden");
         document.getElementById("todoContainer").classList.add("hidden");
         document.getElementById("logoutBtn").classList.add("hidden");
         document.getElementById("taskList").innerHTML = "";
+        websiteBtn.classList.add("hidden"); // ❌ hide website button when logged out
       }
     });
   </script>
