@@ -219,6 +219,13 @@
   <script src="./firebase-config.js"></script> <!-- Your firebaseConfig object -->
 
   <script>
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        // User is logged in
+      } else {
+        // Redirect to sign-in or show guest
+      }
+    });
     // Initialize Firebase after config loaded
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
