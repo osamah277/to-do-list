@@ -226,6 +226,9 @@
         // Redirect to sign-in or show guest
       }
     });
+
+    const user = firebase.auth().currentUser;
+    const tasksRef = firebase.firestore().collection("tasks").doc(user.uid);
     // Initialize Firebase after config loaded
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
