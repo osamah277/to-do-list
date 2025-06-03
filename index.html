@@ -285,6 +285,7 @@
       <input type="password" id="password" placeholder="Password" autocomplete="current-password"><br>
       <button onclick="login()">Login</button>
       <button onclick="register()" style="background-color: green;">Register</button>
+      <button onclick="loginWithGoogle()" style="background-color: #db4437; color: white;">Sign in with Google</button>
     </div>
     <p class="copyright-note">© All rights reserved to Osamah Hasan</p>
     <p class="copyright-note">© This web is not designed to be presented on phones</p>
@@ -504,6 +505,19 @@
         websiteBtn.classList.add("hidden"); // ❌ hide website button when logged out
       }
     });
+    function loginWithGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+      .then(result => {
+        document.getElementById("loginContainer").classList.add("hidden");
+        document.getElementById("todoContainer").classList.remove("hidden");
+        document.getElementById("bottomBar").classList.remove("hidden");
+        loadTasks();
+      })
+      .catch(error => {
+        alert("Google Sign-in failed: " + error.message);
+      });
+    }
   </script>
 </body>
 </html>
