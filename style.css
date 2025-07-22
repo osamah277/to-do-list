@@ -1,0 +1,272 @@
+:root {
+  --bg-light: #f4f6f8;
+  --bg-dark: #1e1e1e;
+  --container-light: #ffffff;
+  --container-dark: #2c2c2c;
+  --text-light: #333;
+  --text-dark: #eee;
+  --accent: #007BFF;
+  }
+    
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: var(--bg-light);
+    color: var(--text-light);
+    margin: 0;
+    padding: 20px 20px 90px; /* space for logout button */
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+    .dark-mode {
+      background-color: var(--bg-dark);
+      color: var(--text-dark);
+    }
+
+    .container {
+      max-width: 480px;
+      margin: auto;
+      background-color: var(--container-light);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s;
+    }
+
+    .dark-mode .container {
+      background-color: var(--container-dark);
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+    }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 10px 16px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background-color: var(--accent);
+      color: white;
+      transition: background-color 0.2s;
+      margin-right: 10px;
+      margin-top: 6px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .mode-toggle {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      font-size: 1.5rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-light);
+    }
+
+    .dark-mode .mode-toggle {
+      color: var(--text-dark);
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 0;
+      margin-top: 16px;
+    }
+
+    li {
+      background-color: #e9e9e9;
+      margin-bottom: 10px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .dark-mode li {
+      background-color: #3a3a3a;
+    }
+
+    .task-text {
+      flex-grow: 1;
+      margin-right: 10px;
+      word-break: break-word;
+    }
+
+    .btn {
+      margin: 4px 4px 0 0;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .edit-btn {
+      background-color: orange;
+      color: white;
+    }
+
+    .save-btn {
+      background-color: green;
+      color: white;
+    }
+
+    .delete-btn {
+      background-color: crimson;
+      color: white;
+    }
+
+    .logout-btn {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      padding: 20px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      background-color: red;
+      color: white;
+      border: none;
+      border-radius: 0;
+      cursor: pointer;
+      z-index: 999;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .logout-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      display: flex;
+      width: 100%;
+      z-index: 999;
+    }
+
+    .half-btn {
+      flex: 1;
+      padding: 20px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      color: white;
+      transition: background-color 0.2s;
+    }
+
+    .half-btn:first-child {
+      background-color: red;
+    }
+
+    .half-btn:last-child {
+      background-color: #007BFF;
+    }
+
+    .half-btn:first-child:hover {
+      background-color: darkred;
+    }
+
+    .half-btn:last-child:hover {
+      background-color: #0056b3;
+    }
+
+    .login-website-btn {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      padding: 20px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      z-index: 999;
+      border-radius: 0;
+    }
+
+    .login-website-btn:hover {
+      background-color: #0056b3;
+    }
+    .top-right-btn {
+      position: fixed;
+      top: 23px;
+      right: 90px; /* adjust if needed to space it from 🌓 */
+      font-size: 0.95rem;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      cursor: pointer;
+      z-index: 1000;
+      transition: background-color 0.2s;
+    }
+    .top-right-btn:hover {
+      background-color: #0056b3;
+    }
+    .dark-mode .top-right-btn {
+      background-color: #0056b3;
+    }
+    /* Responsive improvements */
+    @media (max-width: 520px) {
+      body {
+        padding: 15px 15px 90px;
+      }
+      .container {
+        padding: 16px;
+        margin: 10px;
+      }
+
+      button {
+        width: 100%;
+        margin: 6px 0 0 0;
+      }
+      .btn {
+        flex: 1 1 45%;
+        margin: 6px 2% 0 0;
+      }
+      li {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .task-text {
+        margin-bottom: 10px;
+      }
+    }
+    /* Copyright note styling */
+    .copyright-note {
+      text-align: center;
+      font-size: 0.75rem;
+      color: gray;
+      margin-top: 10px;
+    }
+
+    .button-container {
+  display: flex;
+  gap: 10px; /* spacing between buttons */
+  margin-top: 6px;
+}
+
+.mode-toggle,
+.top-right-btn {
+  width: auto; /* or set a fixed width if needed */
+  padding: 6px 12px;
+}
