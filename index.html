@@ -15,7 +15,7 @@
 
   <!-- Top right buttons -->
   <div class="button-container">
-    < <button class="mode-toggle" onclick="toggleDarkMode()">🌓</button>
+    <button class="mode-toggle" onclick="toggleDarkMode()">🌓</button>
     <button id="websiteBtn" class="top-right-btn hidden" onclick="window.open('https://osamah277.github.io/home/')">Visit Website</button>
   </div>
 
@@ -31,8 +31,6 @@
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="height: 18px; vertical-align: middle; margin-right: 2px;">
       </button>
     </div>
-    <p class="copyright-note">© All rights reserved to Osamah Hasan</p>
-    <p class="copyright-note">© This web is not designed to be presented on phones</p>
 
     <div id="todoContainer" class="hidden">
       <h2>To-Do List</h2>
@@ -40,6 +38,7 @@
       <button onclick="addTask()">Add Task</button>
       <ul id="taskList"></ul>
     </div>
+    <p class="copyright-note">© All rights reserved to Osamah Hasan</p>
   </div>
 
   <div id="bottomBar" class="logout-bar hidden">
@@ -47,7 +46,6 @@
     <button id="websiteBtn" class="login-website-btn" onclick="window.location.href='https://osamah277.github.io/home/'">Visit Website</button>
     <!-- Button shown ONLY when logged in -->
     <button id="logoutBtn" class="logout-btn hidden" onclick="logout()">Logout</button>
-    <button class="half-btn" onclick="window.location.href='https://osamah277.github.io/home/'">Visit Site</button>
   </div>
 
   <!-- Firebase SDKs and config: load first -->
